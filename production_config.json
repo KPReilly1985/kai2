@@ -1,0 +1,25 @@
+{
+  "environment": "production",
+  "kalshi": {
+    "base_url": "https://trading-api.kalshi.com/trade-api/v2",
+    "key_id": "cebf4b9e-b84d-4c5e-a5cd-339694c5733d",
+    "private_key_path": "./kalshi_private_key.pem"
+  },
+  "trading": {
+    "min_edge": 0.05,
+    "max_position_size": 0.02,
+    "starting_bankroll": 1000,
+    "risk_limit_daily": 200
+  },
+  "models": {
+    "nfl_expected_brier": 0.1512,
+    "mlb_expected_performance": "56.2% scenarios",
+    "soccer_expected_performance": "65.0% three-way"
+  },
+  "monitoring": {
+    "log_level": "INFO",
+    "performance_tracking": true,
+    "alert_on_large_losses": true,
+    "daily_reports": true
+  }
+}

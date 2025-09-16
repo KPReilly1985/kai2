@@ -1,0 +1,224 @@
+# ============================================================================
+# INSTITUTIONAL-GRADE TRADING CONFIGURATION
+# ============================================================================
+# Complete configuration for institutional-level Kalshi trading
+
+# --- Kalshi API Configuration ---
+kalshi:
+  base_url: "https://trading-api.kalshi.com/trading-api/v2"
+  websocket_url: "wss://trading-api.kalshi.com/trade-api/ws"
+  key_id: "cebf4b9e-b84d-4c5e-a5cd-339694c5733d"
+  private_key_path: "./kalshi_private_key.pem"
+  max_retries: 3
+  backoff_seconds: 2
+  timeout_seconds: 30
+  use_sdk: true
+  live_data: true
+
+bankroll: 1000.0
+edge_threshold: 0.05
+paper_trading: false
+log_level: "INFO"
+
+development:
+mock_markets: true
+simulate_fills: true
+
+# --- Risk Management (Institutional Grade) ---
+risk:
+  max_daily_loss_pct: 0.15           # 15% daily loss limit
+  max_portfolio_risk: 0.25           # 25% max portfolio exposure
+  max_per_event_risk: 0.08           # 8% max risk per single event
+  exposure_limit_pct: 0.40           # 40% max total exposure
+  correlation_limit: 0.70            # 70% max correlation between positions
+  
+  # Drawdown scaling (reduce position sizes during losses)
+  drawdown_scaling:
+    enabled: true
+    scale_breaks: [0.05, 0.10, 0.20]      # At 5%, 10%, 20% drawdown
+    scale_factors: [0.80, 0.60, 0.40]     # Reduce sizing to 80%, 60%, 40%
+
+# --- Position Sizing (Enhanced Kelly) ---
+sizing:
+  method: "enhanced_kelly"
+  kelly_fraction: 0.25               # Conservative Kelly (25% of full Kelly)
+  max_per_trade_risk: 0.02           # 2% max risk per single trade
+  min_stake_usd: 10.0               # Minimum position size
+  max_stake_usd: 2000.0             # Maximum position size
+  max_open_positions: 18             # Maximum concurrent positions
+  
+  # Scaling factors
+  volatility_scaling: true           # Reduce size in volatile markets
+  confidence_scaling: true           # Scale with model confidence
+  pattern_scaling: true              # Scale with pattern strength
+
+# --- Exit Strategies (Institutional) ---
+exits:
+  # Stop losses and take profits
+  hard_stop_pct: 0.20               # 20% hard stop loss
+  trailing_stop_pct: 0.12           # 12% trailing stop
+  take_profit_pct: 0.25             # 25% take profit target
+  
+  # Trailing stop parameters
+  trail_start_gain_pct: 0.10        # Start trailing after 10% gain
+  trail_pct: 0.30                   # Trail at 30% of max gain
+  breakeven_lock: true              # Lock in breakeven after profit
+  
+  # Advanced exit triggers
+  use_enhanced_exits: true
+  pattern_reversal_exit: true        # Exit on pattern reversals
+  sentiment_extreme_exit: true       # Exit at sentiment extremes
+  risk_spike_exit: true             # Exit on risk spike detection
+  
+  # Time-based exits (sport-specific)
+  time_stop:
+    enabled: true
+    mlb_half_inning_deadline: 14     # Close MLB positions by 14th half-inning
+    nfl_quarter_deadline: 4          # Close NFL positions by 4th quarter
+    max_hold_hours: 72               # Maximum hold time for any position
+
+# --- Entry Strategy (Institutional Controls) ---
+entry:
+  min_edge_threshold: 0.05           # 5% minimum edge required
+  min_confidence: 0.60               # 60% minimum model confidence
+  max_entries_per_event: 3           # Max 3 positions per event
+  min_time_between_entries: 300      # 5 minutes between entries (seconds)
+  
+  # Entry confirmations
+  require_pattern_confirmation: false # Require pattern confirmation
+  require_sentiment_alignment: false  # Require sentiment alignment
+  avoid_high_risk_periods: true      # Avoid high-risk market periods
+  
+  # Scale-in strategy
+  scale_in_enabled: true             # Allow adding to winning positions
+  scale_in_max_adds: 2              # Maximum additions to position
+  scale_in_threshold: 0.08          # 8% edge required for scale-in
+
+# --- Pattern Analysis ---
+patterns:
+  enabled: true
+  min_data_points: 10               # Minimum price points for analysis
+  lookback_periods: 100             # Historical periods to analyze
+  momentum_threshold: 0.02          # 2% move to detect momentum
+  pattern_confidence_min: 0.6       # Minimum pattern confidence
+  
+  # Pattern types and weights
+  momentum_weight: 0.4
+  reversal_weight: 0.3
+  breakout_weight: 0.3
+
+# --- Monitoring & Performance Tracking ---
+monitoring:
+  health_check_interval: 60         # Health check every 60 seconds
+  track_latency: true               # Track execution latency
+  track_fill_rates: true            # Track order fill rates
+  track_slippage: true              # Track price slippage
+  monitor_memory: true              # Monitor memory usage
+  monitor_cpu: true                 # Monitor CPU usage
+  memory_threshold_mb: 500          # Memory usage alert threshold
+  cpu_threshold_pct: 80             # CPU usage alert threshold
+
+# --- Reporting & Analytics ---
+reporting:
+  enabled: true
+  report_interval_minutes: 10       # Generate reports every 10 minutes
+  save_reports: true                # Save reports to file
+  report_dir: "./reports"           # Report directory
+  
+  # Report contents
+  include_performance: true
+  include_risk_metrics: true
+  include_position_details: true
+  include_pattern_analysis: true
+  
+  # Archiving
+  archive_after: true               # Archive data after session
+  archive_dir: "./archives"         # Archive directory
+  compare_to_baseline: true         # Compare to baseline performance
+
+# --- Environment & Security ---
+environment:
+  env: "production"                 # development, staging, production
+  log_level: "INFO"                # DEBUG, INFO, WARNING, ERROR
+  
+  # Security settings
+  encrypt_keys: false               # Encrypt API keys (not implemented)
+  key_rotation_days: 90            # Rotate keys every 90 days
+  allowed_ips: []                  # Restrict to specific IPs
+  use_ssl: true                    # Use SSL connections
+  
+# --- File Paths ---
+paths:
+  data_dir: "./data"               # Data storage directory
+  log_dir: "./logs"                # Log file directory
+  backup_dir: "./backups"          # Backup directory
+  temp_dir: "./temp"               # Temporary files
+  credentials_file: "./credentials.json"  # Credentials file
+  
+# --- Trading Loop ---
+loop:
+  poll_interval_seconds: 15        # Check markets every 15 seconds
+  max_markets_per_cycle: 50        # Maximum markets to analyze per cycle
+  error_retry_delay: 5             # Retry delay after errors (seconds)
+  market_timeout_seconds: 10       # Timeout for market data requests
+
+# --- Model-Specific Settings ---
+models:
+  nfl:
+    expected_brier: 0.1512          # Your proven NFL model performance
+    confidence_boost: 0.1           # Confidence boost for proven model
+    weight: 1.0                     # Model weight in ensemble
+  
+  mlb:
+    confidence_threshold: 0.55      # Minimum confidence for MLB predictions
+    late_inning_boost: 0.05         # Extra confidence in late innings
+    weight: 1.0
+  
+  soccer:
+    three_way_enabled: true         # Enable 3-way predictions
+    draw_threshold: 0.25           # Minimum draw probability to consider
+    weight: 0.9                    # Slightly lower weight (less data)
+
+# --- Advanced Features ---
+advanced:
+  # Machine learning enhancements (future)
+  ml_features:
+    enabled: false
+    model_path: ""
+    retrain_interval_hours: 24
+  
+  # Market making capabilities (future)
+  market_making:
+    enabled: false
+    spread_target_bp: 50
+    max_inventory: 100
+  
+  # Arbitrage detection (future)
+  arbitrage:
+    enabled: false
+    min_profit_bp: 25
+    max_position_size: 50
+
+# --- Testing & Validation ---
+testing:
+  paper_trading: false              # Start with live trading
+  soak_test:
+    enabled: false                 # Long-running validation test
+    duration_hours: 6             # Soak test duration
+    report_every_minutes: 10      # Report frequency during soak
+  
+  # Test tickers for validation
+  test_tickers:
+    - "NFL_KC_BUF_H1"
+    - "MLB_NYY_BOS_H1"
+    - "NFL_SF_DAL_H1"
+
+    # Add this section to enable ESPN
+sports_feed:
+  type: "http"
+  provider: "espn"
+  http:
+    base_url: "https://site.api.espn.com/apis/site/v2/sports"
+    timeout_seconds: 10
+    cache_ttl_seconds: 60
+  update_interval: 30

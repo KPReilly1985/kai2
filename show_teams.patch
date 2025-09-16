@@ -1,0 +1,126 @@
+--- a/clean_working_bot.py
++++ b/clean_working_bot.py
+@@ -122,6 +122,27 @@ class FixedKalshiTickerParser:
+             "ATL": "Atlanta Dream",
+         }
+ 
++        # Optional: expand mappings for popular MLB/NFL/NBA team codes
++        self.team_mappings.update({
++            # MLB
++            "NYY": "Yankees", "BOS": "Red Sox", "LAD": "Dodgers", "ATL": "Braves",
++            "CHC": "Cubs", "HOU": "Astros", "NYM": "Mets", "PHI": "Phillies",
++            "SDP": "Padres", "SFG": "Giants", "SEA": "Mariners", "TBR": "Rays",
++            "LAA": "Angels", "CLE": "Guardians", "DET": "Tigers",
++            # NFL
++            "KC": "Chiefs", "BUF": "Bills", "SF": "49ers", "DAL": "Cowboys",
++            "PHI": "Eagles", "NYJ": "Jets", "NYG": "Giants", "MIA": "Dolphins",
++            "NE": "Patriots", "BAL": "Ravens", "CIN": "Bengals", "PIT": "Steelers",
++            "LAR": "Rams", "LAC": "Chargers", "JAX": "Jaguars",
++            # NBA
++            "LAL": "Lakers", "BOS": "Celtics", "GSW": "Warriors", "MIA": "Heat",
++            "NYK": "Knicks", "DAL": "Mavericks", "MIL": "Bucks",
++            "PHX": "Suns", "DEN": "Nuggets", "CHI": "Bulls",
++        })
++
+     def parse(self, ticker: str) -> ParsedTicker:
+         """Parse ticker with Kalshi-specific logic"""
+         ticker = ticker.strip().upper()
+@@ -545,6 +566,39 @@ class RealKalshiTradingBot:
+         self.sports_feed = RealSportsFeed()
+         self.logger.info("✅ Real sports feed with ESPN integration loaded")
+ 
++    # --- NEW: human-readable labels for logs ---------------------------------
++    def _map_code_to_name(self, code: str) -> str:
++        """Map 2-3 letter codes to nicer names when we know them; otherwise echo the code."""
++        if not code:
++            return ""
++        try:
++            return _parser.team_mappings.get(str(code).upper(), str(code).upper())
++        except Exception:
++            return str(code).upper()
++
++    def _format_label(
++        self,
++        ticker: str,
++        market: Optional[Dict] = None,
++        side: Optional[str] = None,
++        outcome: Optional[str] = None,
++    ) -> str:
++        """
++        Build a readable label like: [TENNIS] Boulter vs Yeo — pick: Boulter
++        Falls back to ticker parts if we don't have full names.
++        """
++        parsed = parse_ticker(ticker)
++        sport = parsed.sport.value.upper() if parsed.sport != Sport.UNKNOWN else "SPORT"
++        title = (market or {}).get("title") or ""
++
++        if title:
++            base = title
++        else:
++            t1 = self._map_code_to_name(parsed.team1)
++            t2 = self._map_code_to_name(parsed.team2)
++            base = f"{t1} vs {t2}"
++        pick_code = (outcome or parsed.outcome or "").upper()
++        pick = self._map_code_to_name(pick_code) if pick_code else ""
++        return f"[{sport}] {base}{(' — pick: ' + pick) if pick else ''}"
++
+     def _initialize_kalshi_auth(self):
+         """UPDATED: Initialize real Kalshi authentication with balance adjustment"""
+         try:
+@@ -822,6 +876,11 @@ class RealKalshiTradingBot:
+                 },
+             }
+ 
++            # NEW: pretty label for logs + keep market snapshot for context
++            decision_data["label"] = self._format_label(
++                ticker, market_data, side=side, outcome=parsed.outcome
++            )
++            decision_data["market"] = market_data
+             return True, decision_data
+         except Exception as e:
+             self.logger.error(f"Position decision failed for {ticker}: {e}")
+@@ -873,7 +932,16 @@ class RealKalshiTradingBot:
+                     return None
+             else:
+                 # Paper trading mode
+-                self.logger.info(f"PAPER TRADE: {ticker} {side.upper()} {quantity} @ {entry_price:.2f}")
++                # NEW: include sport + teams and pick label
++                label = decision_data.get("label") or self._format_label(
++                    ticker,
++                    decision_data.get("market"),
++                    side=side,
++                    outcome=parse_ticker(ticker).outcome,
++                )
++                self.logger.info(
++                    f"PAPER TRADE: {label} | {ticker} {side.upper()} {quantity} @ {entry_price:.2f}"
++                )
+ 
+             # Calculate exit targets
+             take_profit_price = (
+@@ -922,6 +990,11 @@ class RealKalshiTradingBot:
+             self.risk_manager.update_risk_metrics(0, new_position=True)
+ 
+             self.logger.info(f"Position added: {ticker} {side} {quantity} @ {entry_price:.2f}")
++            # NEW: show game label on executed printout
++            label = decision_data.get("label") or self._format_label(
++                ticker, decision_data.get("market"), side=side, outcome=parse_ticker(ticker).outcome
++            )
++            self.logger.info(f" Game: {label}")
+             self.logger.info(
+                 f"Exit targets: TP={take_profit_price:.2f}, Stop={stop_loss_price:.2f}, Time={time_exit}"
+             )
+@@ -1005,8 +1078,11 @@ class RealKalshiTradingBot:
+             self.risk_manager.total_exposure -= position_value
+             self.risk_manager.update_risk_metrics(pnl)
+ 
+-            # Log closure
+-            self.logger.info(f"POSITION CLOSED: {ticker} - {reason.upper()}")
++            # Log closure (NEW: friendly label)
++            try:
++                label = self._format_label(ticker)
++            except Exception:
++                label = ticker
++            self.logger.info(f"POSITION CLOSED: {label} - {reason.upper()}")
+             self.logger.info(f"Exit: {position.quantity} @ {exit_price:.2f}, PnL: ${pnl:.2f}")
+ 
+             # Move to closed positions
